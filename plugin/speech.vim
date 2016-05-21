@@ -46,7 +46,7 @@ let g:SpeechGoogleApiKey = ''
 let s:SpeechToTextPid = 0
 
 function! SpeechToText ()
-  if g:SpeechGoogleApiKey == ''
+  if !exists("g:SpeechGoogleApiKey")
     echo 'Please set g:SpeechGoogleApiKey'
     return
   endif
