@@ -41,7 +41,6 @@
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 let g:SpeechLang = 'en-us'
-let g:SpeechGoogleApiKey = ''
 
 let s:SpeechToTextPid = 0
 
