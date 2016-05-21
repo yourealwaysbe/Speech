@@ -1,6 +1,10 @@
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Speech.vim - Speech to text and text to speech via google speech api.  "
 " Copyright (C) <2011>  Onur Aslan  <onur@onur.im>                       "
+"               <2016>  Matthew Hague <matthewhague@zoho.com>            "
+"                                                                        "
+" Configure:                                                             "
+" let g:SpeechGoogleApiKey='<your google speech api key>'                "
 "                                                                        "
 " Speech to text:                                                        "
 " <Leader>r for record your voice and press again to convert to text and "
@@ -9,17 +13,14 @@
 " Text to speech:                                                        "
 " <Leader>s to get speech of your current line.                          "
 "                                                                        "
-" Requiments: In order to run this script, you need ffmpeg (with flac    "
+" Requiments: In order to run this script, you need sox (with flac       "
 " encode support), wget and mplayer. This also works under UNIX like     "
 " systems.                                                               "
 "                                                                        "
-" This script uses ALSA to record your voice. If you have trouble when   "
-" you recording your voice, try to change SpechHwId variable. It comes   "
-" with hw:0,0 default. You can test your hw id with:                     "
+" This script uses 'rec' to record your voice. If you have trouble when  "
+" you recording your voice.  You can test your setup with:               "
 "                                                                        "
-" ffmpeg -f alsa -ar 16000 -ac 2 -i hw:0,0 -acodec flac -ab 96k out.flac "
-"                                                                        "
-" 'arecord -l' will give you list of audio devices.                      "
+" rec -r 16000 -c 1 test.flac
 "                                                                        "
 " You can change language with SpeechLang variable.                      "
 "                                                                        "
@@ -40,41 +41,44 @@
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 let g:SpeechLang = 'en-us'
-let g:SpeechHwId = 'hw:0,0'
+let g:SpeechGoogleApiKey = ''
 
 let s:SpeechToTextPid = 0
 
 function! SpeechToText ()
+  if g:SpeechGoogleApiKey == ''
+    echo 'Please set g:SpeechGoogleApiKey'
+    return
+  endif
+
   if s:SpeechToTextPid == 0
     let x = system ('rm -rf /tmp/vimspeech.flac')
-    let s:SpeechToTextPid = system ('ffmpeg -f alsa ' .
-                                    \ '-ar 16000 ' .
-                                    \ '-ac 2 ' .
-                                    \ '-i ' . g:SpeechHwId . ' ' .
-                                    \ '-acodec flac ' .
-                                    \ '-ab 96k ' .
+    let s:SpeechToTextPid = system ('rec ' .
+                                    \ '-r 16000 ' .
+                                    \ '-c 1 ' .
                                     \ '/tmp/vimspeech.flac > /dev/null 2>&1 & ' .
                                     \ 'echo $!')
     echo 'Speak now'
   else
     echo 'Converting...'
     let x = system ('kill -1 ' . s:SpeechToTextPid)
+    let s:SpeechToTextPid = 0
     let result = system ('wget -q -U ' . shellescape ('Mozilla/5.0') .
                          \ ' --post-file=/tmp/vimspeech.flac' .
                          \ ' --header=' .
                          \ shellescape ('Content-Type: audio/x-flac; ' .
                          \              'rate=16000') .
                          \ ' -O - ' .
-                         \ shellescape ('http://www.google.com/speech-api/v1/' .
+                         \ shellescape ('http://www.google.com/speech-api/v2/' .
                          \              'recognize?lang=' . g:SpeechLang .
-                         \              '&client=chromium'))
-    let match = matchlist (result, '.*"utterance":"\(.*\)",.*')
+                         \              '&client=chromium' .
+                         \              '&key=' . g:SpeechGoogleApiKey))
+    let match = matchlist (result, '.*"transcript":"\(.*\)",.*')
     if !exists('match[1]')
       echo 'Unable to determine voice'
       return
     endif
     exe ('normal a'.match[1].' ')
-    let s:SpeechToTextPid = 0
   endif
 endfunction
 
